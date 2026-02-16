@@ -13,3 +13,4 @@ test_image.png
 src-tauri/output.txt
 test_obsidian.md
 
+.claude/settings.local.json

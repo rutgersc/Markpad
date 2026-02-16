@@ -13,6 +13,7 @@
 		isScrolled,
 		currentFile,
 		liveMode,
+		diffMode,
 
 		windowTitle,
 		showHome,
@@ -20,6 +21,9 @@
 		ontoggleHome,
 		ononpenFileLocation,
 		ontoggleLiveMode,
+		ontoggleDiffMode,
+		hasDismissedDiff = false,
+		onshowDiff,
 
 		ontoggleEdit,
 		ontoggleSplit,
@@ -40,6 +44,7 @@
 		isScrolled: boolean;
 		currentFile: string;
 		liveMode: boolean;
+		diffMode: boolean;
 
 		windowTitle: string;
 		showHome: boolean;
@@ -47,6 +52,9 @@
 		ontoggleHome: () => void;
 		ononpenFileLocation: () => void;
 		ontoggleLiveMode: () => void;
+		ontoggleDiffMode: () => void;
+		hasDismissedDiff?: boolean;
+		onshowDiff?: () => void;
 
 		ontoggleEdit: () => void;
 		ontoggleSplit?: () => void;
@@ -140,6 +148,8 @@
 				} else {
 					list.push('fullWidth');
 					if (!isEditing) {
+						if (hasDismissedDiff) list.push('showDiff');
+						list.push('diff');
 						list.push('live');
 					}
 				}
@@ -284,7 +294,29 @@
 							><path
 								d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm640-560H160v480h640v-480Zm-640 0v480-480Zm200 360v-240L240-480l120 120Zm360-120L600-600v240l120-120Z" /></svg>
 					</button>
-				{:else if id === 'live'}
+				{:else if id === 'showDiff'}
+				<button
+					class="title-action-btn highlight"
+					onclick={() => onshowDiff?.()}
+					aria-label="Show Diff"
+					onmouseenter={(e) => showTooltip(e, 'Show Diff')}
+					onmouseleave={hideTooltip}
+					transition:fly={{ x: 10, duration: 200 }}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path><circle cx="8" cy="6" r="1.5" fill="currentColor"></circle><circle cx="16" cy="18" r="1.5" fill="currentColor"></circle></svg>
+				</button>
+			{:else if id === 'diff'}
+				<button
+					class="title-action-btn {diffMode ? 'active' : ''}"
+					onclick={ontoggleDiffMode}
+					aria-label="Toggle Diff on Change"
+					onmouseenter={(e) => showTooltip(e, 'Diff on Change')}
+					onmouseleave={hideTooltip}
+					transition:fly={{ x: 10, duration: 200 }}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						><path d="M12 3v18"></path><path d="M5 9l3-3 3 3"></path><path d="M13 15l3 3 3-3"></path></svg>
+				</button>
+			{:else if id === 'live'}
 					<button
 						class="title-action-btn {liveMode ? 'active' : ''}"
 						onclick={ontoggleLiveMode}
@@ -465,6 +497,10 @@
 	.title-action-btn.active {
 		color: var(--color-accent-fg);
 		background: var(--color-canvas-subtle);
+	}
+
+	.title-action-btn.highlight {
+		color: #f0883e;
 	}
 
 	.title-action-btn:hover {

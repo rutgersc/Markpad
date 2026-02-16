@@ -43,6 +43,9 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="tab {isActive ? 'active' : ''}" class:last={isLast} role="group" title={tab.path || 'Recents'} oncontextmenu={handleContextMenu}>
 	<button class="tab-content-btn" {onclick} onmousedown={handleMiddleClick}>
+		{#if tab.hasPendingDiff}
+			<span class="pending-diff-dot"></span>
+		{/if}
 		<span class="tab-label">
 			{tab.title}
 		</span>
@@ -170,5 +173,13 @@
 
 	.tab-close:hover {
 		background-color: var(--color-neutral-muted);
+	}
+
+	.pending-diff-dot {
+		width: 6px;
+		height: 6px;
+		background-color: #f0883e;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>

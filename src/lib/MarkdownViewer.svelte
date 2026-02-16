@@ -21,6 +21,7 @@
 	import FindBar from './components/FindBar.svelte';
 	import { exportAsHtml as _exportHtml, exportAsPdf } from './utils/export';
 	import ZoomOverlay from './components/ZoomOverlay.svelte';
+	import DiffViewer from './components/DiffViewer.svelte';
 import { processMarkdownHtml } from './utils/markdown';
 
 	const appWindow = getCurrentWindow();
@@ -80,6 +81,7 @@ import { t } from './utils/i18n.js';
 		triggerFind: () => void;
 	} | null>(null);
 	let liveMode = $state(false);
+	let diffMode = $state(false);
 
 	let findOpen = $state(false);
 	let findBar = $state<{ reapply: () => void; clearHighlights: () => void } | null>(null);
@@ -104,6 +106,35 @@ import { t } from './utils/i18n.js';
 	let editorPaneEl = $state<HTMLElement>();
 	let viewerPaneEl = $state<HTMLElement>();
 	let isProgrammaticScroll = false;
+	let lastDiff = $state<{ originalContent: string; modifiedContent: string } | null>(null);
+	let showDiff = $state(false);
+
+	const acceptDiff = () => {
+		showDiff = false;
+		lastDiff = null;
+		const tab = tabManager.activeTab;
+		if (tab) tab.hasPendingDiff = false;
+		if (currentFile) loadMarkdown(currentFile);
+	};
+
+	const dismissDiff = () => {
+		showDiff = false;
+	};
+
+	const reopenDiff = async () => {
+		if (!currentFile) return;
+		const tab = tabManager.activeTab;
+		if (!tab) return;
+		try {
+			const newRaw = (await invoke('read_file_content', { path: currentFile })) as string;
+			if (newRaw !== tab.originalContent) {
+				lastDiff = { originalContent: tab.originalContent, modifiedContent: newRaw };
+				showDiff = true;
+			}
+		} catch (e) {
+			console.error('Failed to read file for diff', e);
+		}
+	};
 
 	let toasts = $state<{ id: string; message: string; type: 'info' | 'error' | 'warning' }[]>([]);
 	function addToast(message: string, type: 'info' | 'error' | 'warning' = 'info') {
@@ -562,7 +593,7 @@ import { t } from './utils/i18n.js';
 				tabManager.setTabRawContent(activeId, content);
 			}
 
-			if (liveMode) invoke('watch_file', { path: filePath }).catch(console.error);
+			if (liveMode || diffMode) invoke('watch_file', { path: filePath }).catch(console.error);
 
 			await tick();
 			if (filePath) saveRecentFile(filePath);
@@ -1657,7 +1688,7 @@ import { t } from './utils/i18n.js';
 		tabManager.closeTab(tabId);
 		if (tabManager.tabs.length > 0) return;
 
-		if (liveMode) invoke('unwatch_file').catch(console.error);
+		if (liveMode || diffMode) invoke('unwatch_file').catch(console.error);
 		await destroyWindowAfterTabsClosed();
 	}
 
@@ -1675,10 +1706,13 @@ import { t } from './utils/i18n.js';
 
 	async function toggleLiveMode() {
 		liveMode = !liveMode;
-		if (liveMode && currentFile) {
-			await invoke('watch_file', { path: currentFile });
-			if (tabManager.activeTabId) await loadMarkdown(currentFile);
-		} else {
+		if (liveMode) {
+			diffMode = false;
+			if (currentFile) {
+				await invoke('watch_file', { path: currentFile });
+				if (tabManager.activeTabId) await loadMarkdown(currentFile);
+			}
+		} else if (!diffMode) {
 			await invoke('unwatch_file');
 		}
 	}
@@ -1746,6 +1780,18 @@ import { t } from './utils/i18n.js';
 			} catch (e) {
 				addToast(`Failed to save diagram: ${e}`, 'error');
 			}
+		}
+	}
+
+	async function toggleDiffMode() {
+		diffMode = !diffMode;
+		if (diffMode) {
+			liveMode = false;
+			if (currentFile) await invoke('watch_file', { path: currentFile });
+		} else {
+			showDiff = false;
+			lastDiff = null;
+			if (!liveMode) await invoke('unwatch_file');
 		}
 	}
 
@@ -2296,17 +2342,33 @@ import { t } from './utils/i18n.js';
 				}),
 			);
 			unlisteners.push(
-				await listen('file-changed', () => {
-					if (!liveMode || !currentFile) return;
-					// Skip events caused by our own auto-save / save invocations,
-					// otherwise the reload would clobber any keystrokes that landed
-					// between fs::write and this listener firing.
-					const until = selfWriteUntilByPath.get(currentFile);
-					if (until !== undefined) {
-						if (Date.now() < until) return;
-						selfWriteUntilByPath.delete(currentFile);
+				await listen('file-changed', async () => {
+					if (!currentFile) return;
+
+					if (diffMode) {
+						const tab = tabManager.activeTab;
+						if (!tab) return;
+						try {
+							const newRaw = (await invoke('read_file_content', { path: currentFile })) as string;
+							if (newRaw !== tab.originalContent) {
+								tab.hasPendingDiff = true;
+								lastDiff = { originalContent: tab.originalContent, modifiedContent: newRaw };
+								showDiff = true;
+							}
+						} catch (e) {
+							console.error('Failed to read changed file', e);
+						}
+					} else if (liveMode) {
+						// Skip events caused by our own auto-save / save invocations,
+						// otherwise the reload would clobber any keystrokes that landed
+						// between fs::write and this listener firing.
+						const until = selfWriteUntilByPath.get(currentFile);
+						if (until !== undefined) {
+							if (Date.now() < until) return;
+							selfWriteUntilByPath.delete(currentFile);
+						}
+						loadMarkdown(currentFile);
 					}
-					loadMarkdown(currentFile);
 				}),
 			);
 
@@ -2600,6 +2662,7 @@ import { t } from './utils/i18n.js';
 		isScrolled={false}
 		currentFile={''}
 		{liveMode}
+		{diffMode}
 		windowTitle="Markpad"
 		showHome={false}
 		{zoomLevel}
@@ -2614,6 +2677,9 @@ import { t } from './utils/i18n.js';
 		ontoggleHome={toggleHome}
 		ononpenFileLocation={openFileLocation}
 		ontoggleLiveMode={toggleLiveMode}
+		ontoggleDiffMode={toggleDiffMode}
+		hasDismissedDiff={!showDiff && lastDiff !== null}
+		onshowDiff={reopenDiff}
 		ontoggleEdit={() => toggleEdit()}
 		ontoggleSplit={() => tabManager.activeTabId && toggleSplitView(tabManager.activeTabId)}
 		{isEditing}
@@ -2642,6 +2708,7 @@ import { t } from './utils/i18n.js';
 		{isScrolled}
 		{currentFile}
 		{liveMode}
+		{diffMode}
 		{windowTitle}
 		{showHome}
 		{zoomLevel}
@@ -2656,6 +2723,9 @@ import { t } from './utils/i18n.js';
 		ontoggleHome={toggleHome}
 		ononpenFileLocation={openFileLocation}
 		ontoggleLiveMode={toggleLiveMode}
+		ontoggleDiffMode={toggleDiffMode}
+		hasDismissedDiff={!showDiff && lastDiff !== null}
+		onshowDiff={reopenDiff}
 		ontoggleEdit={() => toggleEdit()}
 		ontoggleSplit={() => tabManager.activeTabId && toggleSplitView(tabManager.activeTabId)}
 		{isEditing}
@@ -2885,7 +2955,16 @@ import { t } from './utils/i18n.js';
 		/>
 	{/if}
 
-	{#if isDragging}
+	{#if showDiff && lastDiff}
+		<DiffViewer
+			originalContent={lastDiff.originalContent}
+			modifiedContent={lastDiff.modifiedContent}
+			onaccept={acceptDiff}
+			ondismiss={dismissDiff}
+			{theme} />
+	{/if}
+
+	{#if isDragging && !isEditing}
 		<div class="drag-overlay" role="presentation">
 			<div class="drag-zones" class:split={isSplit}>
 				{#if isSplit || isEditing}

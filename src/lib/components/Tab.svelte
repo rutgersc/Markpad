@@ -70,6 +70,9 @@
 		if (e.button === 0) e.preventDefault();
 		handleMiddleClick(e);
 	}}>
+		{#if tab.hasPendingDiff}
+			<span class="pending-diff-dot"></span>
+		{/if}
 		<span class="tab-label">
 			{tab.title}
 		</span>
@@ -202,5 +205,13 @@
 
 	.tab-close:hover {
 		background-color: var(--color-neutral-muted);
+	}
+
+	.pending-diff-dot {
+		width: 6px;
+		height: 6px;
+		background-color: #f0883e;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>

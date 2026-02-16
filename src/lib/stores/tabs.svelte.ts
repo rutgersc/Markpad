@@ -19,6 +19,7 @@ export interface Tab {
 	isSplit: boolean;
 	splitRatio: number;
 	isScrollSynced: boolean;
+	hasPendingDiff: boolean;
 }
 
 class TabManager {
@@ -86,7 +87,8 @@ class TabManager {
 			anchorLine: 0,
 			isSplit: false,
 			splitRatio: 0.5,
-			isScrollSynced: false
+			isScrollSynced: false,
+			hasPendingDiff: false
 		});
 
 		this.activeTabId = id;
@@ -113,7 +115,8 @@ class TabManager {
 			anchorLine: 0,
 			isSplit: false,
 			splitRatio: 0.5,
-			isScrollSynced: false
+			isScrollSynced: false,
+			hasPendingDiff: false
 		});
 
 		this.activeTabId = id;
@@ -144,7 +147,8 @@ class TabManager {
 			anchorLine: 0,
 			isSplit: false,
 			splitRatio: 0.5,
-			isScrollSynced: false
+			isScrollSynced: false,
+			hasPendingDiff: false
 		});
 
 		this.activeTabId = id;
@@ -196,6 +200,7 @@ class TabManager {
 			tab.rawContent = raw;
 			tab.originalContent = raw;
 			tab.isDirty = false;
+			tab.hasPendingDiff = false;
 		}
 	}
 

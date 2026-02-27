@@ -37,6 +37,17 @@
 			e.stopPropagation();
 			ondismiss();
 		}
+		const cmdOrCtrl = e.ctrlKey || e.metaKey;
+		const key = e.key.toLowerCase();
+		if (cmdOrCtrl && (key === 'd' || key === 'u') && diffEditor) {
+			e.preventDefault();
+			const editor = diffEditor.getModifiedEditor();
+			const delta = editor.getLayoutInfo().height / 2;
+			editor.setScrollTop(
+				editor.getScrollTop() + (key === 'd' ? delta : -delta),
+				monaco.editor.ScrollType.Smooth,
+			);
+		}
 	}
 
 	onMount(() => {

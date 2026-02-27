@@ -962,6 +962,14 @@
 			e.preventDefault();
 			zoomLevel = 100;
 		}
+		if (!isEditing && cmdOrCtrl && key === 'd' && markdownBody) {
+			e.preventDefault();
+			markdownBody.scrollBy({ top: markdownBody.clientHeight / 2, behavior: 'smooth' });
+		}
+		if (!isEditing && cmdOrCtrl && key === 'u' && markdownBody) {
+			e.preventDefault();
+			markdownBody.scrollBy({ top: -markdownBody.clientHeight / 2, behavior: 'smooth' });
+		}
 	}
 
 	function handleMouseUp(e: MouseEvent) {

@@ -240,6 +240,10 @@ fn show_context_menu(
             let rename = tauri::menu::MenuItem::with_id(&app, "ctx_tab_rename", "Rename", true, None::<&str>).map_err(|e| e.to_string())?;
             menu.append(&rename).map_err(|e| e.to_string())?;
 
+            let has_path = path.is_some();
+            let copy_path = tauri::menu::MenuItem::with_id(&app, "ctx_tab_copy_path", "Copy File Path", has_path, None::<&str>).map_err(|e| e.to_string())?;
+            menu.append(&copy_path).map_err(|e| e.to_string())?;
+
             let sep = tauri::menu::PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
             menu.append(&sep).map_err(|e| e.to_string())?;
 
@@ -367,6 +371,14 @@ pub fn run() {
                                 }
                             }
                             _ => {}
+                        }
+                    }
+                 }
+                 "ctx_tab_copy_path" => {
+                    let path_lock = state.active_path.lock().unwrap();
+                    if let Some(path) = path_lock.as_ref() {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.emit("menu-tab-copy-path", path);
                         }
                     }
                  }

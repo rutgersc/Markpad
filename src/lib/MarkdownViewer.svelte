@@ -30,7 +30,7 @@
 	let isFocused = $state(true);
 	let markdownBody = $state<HTMLElement | null>(null);
 	let liveMode = $state(false);
-	let diffMode = $state(false);
+	let diffMode = $state(true);
 
 	let isDragging = $state(false);
 	let isProgrammaticScroll = false;
@@ -1191,6 +1191,12 @@
 						const tabsToClose = tabManager.tabs.slice(index + 1).map((t) => t.id);
 						tabsToClose.forEach((id) => tabManager.closeTab(id));
 					}
+				}),
+			);
+			unlisteners.push(
+				await listen('menu-tab-copy-path', (event) => {
+					const path = event.payload as string;
+					navigator.clipboard.writeText(path);
 				}),
 			);
 			unlisteners.push(

@@ -81,7 +81,7 @@ import { t } from './utils/i18n.js';
 		triggerFind: () => void;
 	} | null>(null);
 	let liveMode = $state(false);
-	let diffMode = $state(false);
+	let diffMode = $state(true);
 
 	let findOpen = $state(false);
 	let findBar = $state<{ reapply: () => void; clearHighlights: () => void } | null>(null);
@@ -2478,6 +2478,12 @@ import { t } from './utils/i18n.js';
 			unlisteners.push(await listen('menu-file-save-as',     () => saveContentAs()));
 			unlisteners.push(await listen('menu-file-export-html', () => exportAsHtml()));
 			unlisteners.push(await listen('menu-file-export-pdf', () => exportAsPdf()));
+			unlisteners.push(
+				await listen('menu-tab-copy-path', (event) => {
+					const path = event.payload as string;
+					navigator.clipboard.writeText(path);
+				}),
+			);
 			unlisteners.push(
 				await appWindow.onCloseRequested(async (event) => {
 					console.log('onCloseRequested triggered');

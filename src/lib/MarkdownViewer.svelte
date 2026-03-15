@@ -861,6 +861,18 @@
 
 	let zoomLevel = $state(100);
 
+	const smoothScroll = (el: HTMLElement, delta: number, duration = 150) => {
+		const start = el.scrollTop;
+		const target = Math.max(0, Math.min(start + delta, el.scrollHeight - el.clientHeight));
+		const startTime = performance.now();
+		const step = (now: number) => {
+			const t = Math.min((now - startTime) / duration, 1);
+			el.scrollTop = start + (target - start) * (1 - (1 - t) * (1 - t));
+			if (t < 1) requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
+	};
+
 	function handleWheel(e: WheelEvent) {
 		if (e.ctrlKey || e.metaKey) {
 			if (e.deltaY < 0) {
@@ -964,11 +976,19 @@
 		}
 		if (!isEditing && cmdOrCtrl && key === 'd' && markdownBody) {
 			e.preventDefault();
-			markdownBody.scrollBy({ top: markdownBody.clientHeight / 2, behavior: 'smooth' });
+			smoothScroll(markdownBody, markdownBody.clientHeight / 2);
 		}
 		if (!isEditing && cmdOrCtrl && key === 'u' && markdownBody) {
 			e.preventDefault();
-			markdownBody.scrollBy({ top: -markdownBody.clientHeight / 2, behavior: 'smooth' });
+			smoothScroll(markdownBody, -markdownBody.clientHeight / 2);
+		}
+		if (!isEditing && !cmdOrCtrl && key === 'j' && markdownBody && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+			e.preventDefault();
+			smoothScroll(markdownBody, 200);
+		}
+		if (!isEditing && !cmdOrCtrl && key === 'k' && markdownBody && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+			e.preventDefault();
+			smoothScroll(markdownBody, -200);
 		}
 	}
 

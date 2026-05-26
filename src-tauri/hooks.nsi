@@ -17,6 +17,7 @@
 !macroend
 
 !macro NSIS_HOOK_POST_INSTALL
+  RMDir /r "$LOCALAPPDATA\com.alecdotdev.markpad\EBWebView"
   CreateShortcut "$DESKTOP\Markpad.lnk" "$INSTDIR\Markpad.exe" "" "$INSTDIR\Markpad.exe" 0
 
   WriteRegStr HKCU "Software\Classes\Applications\Markpad.exe\shell\open\command" "" "$\"$INSTDIR\Markpad.exe$\" $\"%1$\""
@@ -34,4 +35,6 @@
   !insertmacro MARKPAD_UNREGISTER_OPEN_WITH "markdown"
 
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+
+  RMDir /r "$LOCALAPPDATA\com.alecdotdev.markpad"
 !macroend

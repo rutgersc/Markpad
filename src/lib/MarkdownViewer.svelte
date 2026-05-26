@@ -2499,12 +2499,6 @@ import { t } from './utils/i18n.js';
 			unlisteners.push(await listen('menu-file-export-html', () => exportAsHtml()));
 			unlisteners.push(await listen('menu-file-export-pdf', () => exportAsPdf()));
 			unlisteners.push(
-				await listen('menu-tab-copy-path', (event) => {
-					const path = event.payload as string;
-					navigator.clipboard.writeText(path);
-				}),
-			);
-			unlisteners.push(
 				await appWindow.onCloseRequested(async (event) => {
 					console.log('onCloseRequested triggered');
 					if (isForceExiting) return;

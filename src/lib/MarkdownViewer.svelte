@@ -1214,12 +1214,6 @@
 				}),
 			);
 			unlisteners.push(
-				await listen('menu-tab-copy-path', (event) => {
-					const path = event.payload as string;
-					navigator.clipboard.writeText(path);
-				}),
-			);
-			unlisteners.push(
 				await appWindow.onCloseRequested(async (event) => {
 					console.log('onCloseRequested triggered');
 					const dirtyTabs = tabManager.tabs.filter((t) => t.isDirty);

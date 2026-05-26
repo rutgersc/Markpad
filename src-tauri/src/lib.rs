@@ -377,8 +377,8 @@ pub fn run() {
                  "ctx_tab_copy_path" => {
                     let path_lock = state.active_path.lock().unwrap();
                     if let Some(path) = path_lock.as_ref() {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.emit("menu-tab-copy-path", path);
+                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                            let _ = clipboard.set_text(path.clone());
                         }
                     }
                  }

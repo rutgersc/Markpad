@@ -11,11 +11,11 @@
           theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
 
-        if (stored === 'dark' || stored === 'light') {
+        if (stored === 'dark' || stored === 'light' || stored === 'dracula') {
           document.documentElement.setAttribute('data-theme', stored);
         }
 
-        var bg = theme === 'dark' ? '#181818' : '#FDFDFD';
+        var bg = stored === 'dracula' ? '#1e1f29' : (theme === 'dark' ? '#181818' : '#FDFDFD');
         document.documentElement.style.backgroundColor = bg;
       } catch (e) {
         console.error(e);

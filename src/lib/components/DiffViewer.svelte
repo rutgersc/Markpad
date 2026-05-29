@@ -14,7 +14,7 @@
 		modifiedContent: string;
 		onaccept: () => void;
 		ondismiss: () => void;
-		theme?: 'system' | 'light' | 'dark';
+		theme?: string;
 	}>();
 
 	let container = $state<HTMLDivElement>();
@@ -27,7 +27,9 @@
 	};
 
 	const isDark = () =>
-		theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		theme === 'dark' ||
+		theme === 'dracula' ||
+		(theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
 	const getTheme = () => (isDark() ? 'dracula' : 'app-theme-light');
 

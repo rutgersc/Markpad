@@ -322,7 +322,7 @@
 					src={iconUrl}
 					alt="icon"
 					class="window-icon"
-					style:filter={theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'none' : 'invert(0.7)'} />
+					style:filter={theme === 'dark' || theme === 'dracula' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'none' : 'invert(0.7)'} />
 			</button>
 			{#if homeMenuOpen}
 				<div class="home-dropdown-menu" transition:fly={{ y: 5, duration: 150 }} onclick={(e) => e.stopPropagation()}>
@@ -745,6 +745,7 @@
 								<button class="theme-option {theme === 'system' ? 'selected' : ''}" onclick={() => handleSetTheme('system')}> {t('theme.followSystem', currentLanguage)} </button>
 								<button class="theme-option {theme === 'light' ? 'selected' : ''}" onclick={() => handleSetTheme('light')}> {t('theme.defaultLight', currentLanguage)} </button>
 								<button class="theme-option {theme === 'dark' ? 'selected' : ''}" onclick={() => handleSetTheme('dark')}> {t('theme.defaultDark', currentLanguage)} </button>
+								<button class="theme-option {theme === 'dracula' ? 'selected' : ''}" onclick={() => handleSetTheme('dracula')}> Dracula </button>
 								{#if savedVscodeThemes.length > 0}
 									<div class="theme-menu-divider"></div>
 									{#each savedVscodeThemes as t}

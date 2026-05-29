@@ -142,12 +142,42 @@
 					"editorWidget.border": "#cccccc",
 				},
 			});
+
+			monaco.editor.defineTheme('app-theme-dracula', {
+				base: 'vs-dark',
+				inherit: true,
+				rules: [
+					{ background: '1e1f29', token: '' },
+					{ foreground: '6272a4', token: 'comment' },
+					{ foreground: 'f1fa8c', token: 'string' },
+					{ foreground: 'bd93f9', token: 'constant.numeric' },
+					{ foreground: 'bd93f9', token: 'constant.language' },
+					{ foreground: 'ff79c6', token: 'keyword' },
+					{ foreground: 'ff79c6', token: 'storage' },
+					{ foreground: '8be9fd', fontStyle: 'italic', token: 'storage.type' },
+					{ foreground: '50fa7b', token: 'entity.name.function' },
+					{ foreground: 'ffb86c', fontStyle: 'italic', token: 'variable.parameter' },
+					{ foreground: 'ff79c6', token: 'entity.name.tag' },
+					{ foreground: '50fa7b', token: 'entity.other.attribute-name' },
+					{ foreground: '8be9fd', token: 'support.function' },
+					{ foreground: '66d9ef', fontStyle: 'italic', token: 'support.type' },
+				],
+				colors: {
+					'editor.foreground': '#f8f8f2',
+					'editor.background': '#1e1f29',
+					'editor.selectionBackground': '#44475a',
+					'editor.lineHighlightBackground': '#282a36',
+					'editorCursor.foreground': '#f8f8f0',
+					'editorWhitespace.foreground': '#3B3A32',
+				},
+			});
 		};
 
 		defineThemes();
 
 		const getTheme = () => {
 			if (theme && theme.startsWith("vscode:")) return "vscode-custom";
+			if (theme === 'dracula') return 'app-theme-dracula';
 			if (theme === "system") {
 				return window.matchMedia("(prefers-color-scheme: dark)").matches
 					? "app-theme-dark"
@@ -982,13 +1012,15 @@
 		if (editor && theme) {
 			if (theme.startsWith("vscode:")) return;
 			const targetTheme =
-				theme === "system"
-					? window.matchMedia("(prefers-color-scheme: dark)").matches
-						? "app-theme-dark"
-						: "app-theme-light"
-					: theme === "dark"
-						? "app-theme-dark"
-						: "app-theme-light";
+				theme === 'dracula'
+					? 'app-theme-dracula'
+					: theme === "system"
+						? window.matchMedia("(prefers-color-scheme: dark)").matches
+							? "app-theme-dark"
+							: "app-theme-light"
+						: theme === "dark"
+							? "app-theme-dark"
+							: "app-theme-light";
 			monaco.editor.setTheme(targetTheme);
 		}
 	});

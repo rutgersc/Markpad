@@ -233,20 +233,20 @@ import { t } from './utils/i18n.js';
 		localStorage.setItem('theme', theme);
 		invoke('save_theme', { theme }).catch(console.error);
 
-		if (theme === 'system' || theme === 'light' || theme === 'dark') {
+		if (theme === 'system' || theme === 'light' || theme === 'dark' || theme === 'dracula') {
 			if (theme === 'system') {
 				delete document.documentElement.dataset.theme;
 				delete document.documentElement.dataset.themeType;
 			} else {
 				document.documentElement.dataset.theme = theme;
-				document.documentElement.dataset.themeType = theme;
+				document.documentElement.dataset.themeType = theme === 'dracula' ? 'dark' : theme;
 			}
 			clearVscodeTheme();
 			const monaco = (window as any).monaco;
 			if (monaco && monaco.editor) {
 				const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 				const effectiveTheme = theme === 'system' ? (isSystemDark ? 'dark' : 'light') : theme;
-				monaco.editor.setTheme(effectiveTheme === 'dark' ? 'vs-dark' : 'vs');
+				monaco.editor.setTheme(effectiveTheme === 'dark' || effectiveTheme === 'dracula' ? 'vs-dark' : 'vs');
 			}
 		} else if (theme.startsWith('vscode:')) {
 			const name = theme.replace('vscode:', '');
@@ -617,7 +617,7 @@ import { t } from './utils/i18n.js';
 		// Initialize Mermaid with theme based on system preference or override
 		const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 		const datasetThemeType = document.documentElement.dataset.themeType;
-		const isDark = datasetThemeType === 'dark' || (theme === 'dark') || (theme === 'system' && isSystemDark);
+		const isDark = datasetThemeType === 'dark' || (theme === 'dark') || theme === 'dracula' || (theme === 'system' && isSystemDark);
 		const effectiveTheme = isDark ? 'dark' : 'neutral';
 		mermaid.initialize({ startOnLoad: false, theme: effectiveTheme });
 

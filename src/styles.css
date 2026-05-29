@@ -130,6 +130,41 @@ body {
 	}
 }
 
+:root[data-theme="dracula"] {
+	/* Dracula Darker — https://draculatheme.com (darker variant) */
+	--color-fg-default: #f8f8f2;
+	--color-fg-muted: #bdbdc8;
+	--color-fg-subtle: #6272a4;
+	--color-canvas-default: #1e1f29;
+	--color-canvas-subtle: rgba(248, 248, 242, 0.06);
+	--color-border-default: #383a4a;
+	--color-border-muted: #2a2c38;
+	--color-neutral-muted: rgba(248, 248, 242, 0.05);
+	--color-accent-fg: #bd93f9;
+	--color-accent-emphasis: #bd93f9;
+	--color-success-fg: #50fa7b;
+	--color-success-emphasis: #50fa7b;
+	--color-attention-fg: #f1fa8c;
+	--color-attention-emphasis: #f1fa8c;
+	--color-attention-subtle: rgba(241, 250, 140, 0.15);
+	--color-danger-fg: #ff5555;
+	--color-danger-emphasis: #ff5555;
+	--color-done-fg: #ff79c6;
+	--color-done-emphasis: #ff79c6;
+	--color-window-border-top: #383a4a;
+	--color-canvas-overlay: #282a36;
+	--tab-active-bg: #282a36;
+
+	/* Dracula Syntax Highlighting */
+	--hljs-bg: #1e1f29;
+	--hljs-comment: #6272a4;
+	--hljs-keyword: #ff79c6;
+	--hljs-string: #f1fa8c;
+	--hljs-title: #50fa7b;
+	--hljs-variable: #f8f8f2;
+	--hljs-type: #8be9fd;
+}
+
 :root[data-theme="dark"] {
 	/* Explicit Dark Theme Override */
 	--color-fg-default: #e6edf3;

@@ -88,10 +88,10 @@
 	});
 
 	// Theme State
-	let theme = $state<'system' | 'dark' | 'light'>('system');
+	let theme = $state<'system' | 'dark' | 'light' | 'dracula'>('system');
 
 	onMount(() => {
-		const storedTheme = localStorage.getItem('theme') as 'system' | 'dark' | 'light' | null;
+		const storedTheme = localStorage.getItem('theme') as 'system' | 'dark' | 'light' | 'dracula' | null;
 		if (storedTheme) theme = storedTheme;
 		// Clear the forced background color from app.html
 		document.documentElement.style.removeProperty('background-color');
@@ -344,7 +344,7 @@
 
 		// Initialize Mermaid with theme based on system preference or override
 		const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		const effectiveTheme = theme === 'system' ? (isSystemDark ? 'dark' : 'neutral') : theme === 'dark' ? 'dark' : 'neutral';
+		const effectiveTheme = theme === 'system' ? (isSystemDark ? 'dark' : 'neutral') : (theme === 'dark' || theme === 'dracula') ? 'dark' : 'neutral';
 		mermaid.initialize({ startOnLoad: false, theme: effectiveTheme });
 
 		// Process code blocks

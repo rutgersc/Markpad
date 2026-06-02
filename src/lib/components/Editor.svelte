@@ -62,6 +62,7 @@
 		filename: string;
 		parentDir: string;
 	}[] = $state([]);
+	let vimModeOff: monaco.editor.IContextKey<boolean>;
 
 	let cursorPosition = $state<monaco.Position | null>(null);
 	let selectionCount = $state(0);
@@ -249,6 +250,39 @@
 				}
 			}
 		}
+
+		// Half-page smooth scroll (vim-style Ctrl+U / Ctrl+D). Gated on vim being
+		// off — when vim mode is enabled, monaco-vim binds these natively.
+		vimModeOff = editor.createContextKey<boolean>('vimModeOff', !settings.vimMode);
+
+		const smoothScrollEditor = (delta: number, duration = 150) => {
+			const start = editor.getScrollTop();
+			const max = editor.getScrollHeight() - editor.getLayoutInfo().height;
+			const target = Math.max(0, Math.min(start + delta, max));
+			const startTime = performance.now();
+			const step = (now: number) => {
+				const t = Math.min((now - startTime) / duration, 1);
+				editor.setScrollTop(start + (target - start) * (1 - (1 - t) * (1 - t)));
+				if (t < 1) requestAnimationFrame(step);
+			};
+			requestAnimationFrame(step);
+		};
+
+		editor.addAction({
+			id: 'scroll-half-page-down',
+			label: 'Scroll: Half Page Down',
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
+			precondition: 'vimModeOff',
+			run: () => smoothScrollEditor(editor.getLayoutInfo().height / 2),
+		});
+
+		editor.addAction({
+			id: 'scroll-half-page-up',
+			label: 'Scroll: Half Page Up',
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyU],
+			precondition: 'vimModeOff',
+			run: () => smoothScrollEditor(-editor.getLayoutInfo().height / 2),
+		});
 
 		editor.addAction({
 			id: "toggle-minimap",
@@ -480,7 +514,6 @@
 		editor.addAction({
 			id: "fmt-underline",
 			label: t('menu.underline', uiLanguage),
-			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyU],
 			run: () => toggleFormat("<u>|</u>", "tag"),
 		});
 
@@ -1026,6 +1059,7 @@
 	});
 
 	$effect(() => {
+		vimModeOff?.set(!settings.vimMode);
 		if (editor && settings.vimMode && vimStatusNode) {
 			const vim = initVimMode(editor, vimStatusNode);
 			return () => {

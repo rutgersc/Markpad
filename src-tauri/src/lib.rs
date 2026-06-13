@@ -6,8 +6,10 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
+use ignore::WalkBuilder;
 
 /// Write `bytes` to `target` durably and atomically: write to a sibling temp
 /// file, fsync it, then rename over the target. Atomic on both Unix and
@@ -238,10 +240,40 @@ fn process_wikilinks<'a>(content: &'a str) -> Cow<'a, str> {
     processed
 }
 
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+fn process_file_wikilinks(content: &str) -> Cow<'_, str> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    let re = RE.get_or_init(|| Regex::new(r"\[\[([^\[\]\r\n]+)\]\]").unwrap());
+
+    re.replace_all(content, |caps: &Captures| {
+        let inner = caps[1].trim();
+        let (target_raw, label) = match inner.split_once('|') {
+            Some((t, l)) => (t.trim(), l.trim().to_string()),
+            None => (inner, inner.split('#').next().unwrap_or(inner).trim().to_string()),
+        };
+        let target = target_raw.split('#').next().unwrap_or(target_raw).trim();
+        if target.is_empty() {
+            return caps[0].to_string();
+        }
+        format!(
+            "<a class=\"wikilink\" data-wikilink=\"{}\">{}</a>",
+            html_escape(target),
+            html_escape(&label)
+        )
+    })
+}
+
 #[tauri::command]
 fn convert_markdown(content: &str) -> String {
     let processed_embeds = process_internal_embeds(content);
     let processed_links = process_wikilinks(&processed_embeds);
+    let processed_links = process_file_wikilinks(&processed_links);
 
     let mut options = ComrakOptions {
         extension: ComrakExtensionOptions {
@@ -332,6 +364,70 @@ fn open_file_folder(path: String) -> Result<(), String> {
 #[tauri::command]
 fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
     fs::rename(old_path, new_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn resolve_wikilink(current_file: String, target: String) -> Option<String> {
+    let target = target.split('#').next().unwrap_or("").trim().replace('\\', "/");
+    if target.is_empty() {
+        return None;
+    }
+
+    let start_dir = Path::new(&current_file).parent()?;
+
+    fn find_git_root(start: &Path) -> Option<PathBuf> {
+        let mut dir = Some(start);
+        while let Some(d) = dir {
+            if d.join(".git").exists() {
+                return Some(d.to_path_buf());
+            }
+            dir = d.parent();
+        }
+        None
+    }
+
+    let root = find_git_root(start_dir).unwrap_or_else(|| start_dir.to_path_buf());
+
+    let md_exts = ["md", "markdown", "mdown", "mkd"];
+    let has_slash = target.contains('/');
+    let target_lc = target.to_lowercase();
+    let want_path = target_lc.strip_suffix(".md").unwrap_or(&target_lc).to_string();
+    let target_stem_lc = Path::new(&target)
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_lowercase());
+
+    for entry in WalkBuilder::new(&root).build().flatten() {
+        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+            continue;
+        }
+        let path = entry.path();
+        let is_md = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map_or(false, |e| md_exts.contains(&e.to_lowercase().as_str()));
+        if !is_md {
+            continue;
+        }
+
+        let matched = if has_slash {
+            path.strip_prefix(&root).ok().map_or(false, |rel| {
+                let rel_lc = rel.to_string_lossy().replace('\\', "/").to_lowercase();
+                let rel_no_ext = rel_lc.rsplit_once('.').map_or(rel_lc.as_str(), |(a, _)| a);
+                rel_no_ext == want_path || rel_lc == target_lc
+            })
+        } else {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .zip(target_stem_lc.as_deref())
+                .map_or(false, |(stem, want)| stem.to_lowercase() == want)
+        };
+
+        if matched {
+            return Some(path.to_string_lossy().to_string());
+        }
+    }
+
+    None
 }
 
 #[tauri::command]
@@ -1111,6 +1207,7 @@ pub fn run() {
             is_win11,
             open_file_folder,
             rename_file,
+            resolve_wikilink,
             watch_file,
             unwatch_file,
             show_window,

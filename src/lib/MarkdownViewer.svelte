@@ -1915,6 +1915,13 @@ import { t } from './utils/i18n.js';
 				}
 			}
 
+			const wikiTarget = anchor.dataset.wikilink;
+			if (wikiTarget) {
+				const rect = anchor.getBoundingClientRect();
+				tooltip = { show: true, text: `[[${wikiTarget}]]`, shortcut: '', html: '', isFootnote: false, x: rect.left + rect.width / 2, y: rect.top - 8, align: 'top' };
+				return;
+			}
+
 			if (anchor.href) {
 				const rect = anchor.getBoundingClientRect();
 				tooltip = { show: true, text: anchor.href, shortcut: '', html: '', isFootnote: false, x: rect.left + rect.width / 2, y: rect.top - 8, align: 'top' };
@@ -1934,6 +1941,25 @@ import { t } from './utils/i18n.js';
 		while (target && target.tagName !== 'A' && target !== document.body) target = target.parentElement as HTMLElement;
 		if (target?.tagName === 'A') {
 			const anchor = target as HTMLAnchorElement;
+
+			const wikiTarget = anchor.dataset.wikilink;
+			if (wikiTarget) {
+				event.preventDefault();
+				try {
+					const resolved = (await invoke('resolve_wikilink', { currentFile, target: wikiTarget })) as string | null;
+					if (resolved) {
+						const inTab = event.ctrlKey || event.metaKey || event.shiftKey;
+						await loadMarkdown(resolved, inTab ? { navigate: true } : {});
+					} else {
+						addToast(`Note not found: ${wikiTarget}`, 'error');
+					}
+				} catch (e) {
+					console.error('Failed to resolve wikilink', e);
+					addToast(`Note not found: ${wikiTarget}`, 'error');
+				}
+				return;
+			}
+
 			const rawHref = anchor.getAttribute('href');
 			if (!rawHref) return;
 
@@ -2954,6 +2980,7 @@ import { t } from './utils/i18n.js';
 		{/if}
 	</div>
 
+
 	<Modal
 		show={modalState.show}
 		title={modalState.title}
@@ -3250,6 +3277,15 @@ import { t } from './utils/i18n.js';
 		border-top: 6px solid var(--color-canvas-overlay);
 	}
 
+	:global(.markdown-body a.wikilink) {
+		color: var(--color-accent-fg);
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	:global(.markdown-body a.wikilink:hover) {
+		text-decoration: underline;
+	}
 
 	.drag-overlay {
 		position: fixed;

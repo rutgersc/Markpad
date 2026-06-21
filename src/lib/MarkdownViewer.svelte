@@ -1922,9 +1922,9 @@ import { t } from './utils/i18n.js';
 				return;
 			}
 
-			if (anchor.href) {
+			if (rawHref) {
 				const rect = anchor.getBoundingClientRect();
-				tooltip = { show: true, text: anchor.href, shortcut: '', html: '', isFootnote: false, x: rect.left + rect.width / 2, y: rect.top - 8, align: 'top' };
+				tooltip = { show: true, text: rawHref, shortcut: '', html: '', isFootnote: false, x: rect.left + rect.width / 2, y: rect.top - 8, align: 'top' };
 			}
 		}
 	}

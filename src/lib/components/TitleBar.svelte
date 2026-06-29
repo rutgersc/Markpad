@@ -25,6 +25,10 @@
 
 		windowTitle,
 		showHome,
+		onback,
+		onforward,
+		canBack = false,
+		canForward = false,
 		onselectFile,
 		onnewFile,
 		onopenFile,
@@ -65,6 +69,10 @@
 
 		windowTitle: string;
 		showHome: boolean;
+		onback?: () => void;
+		onforward?: () => void;
+		canBack?: boolean;
+		canForward?: boolean;
 		onselectFile?: () => void;
 		onnewFile?: () => void;
 		onopenFile?: () => void;
@@ -445,6 +453,32 @@
 				</div>
 			{/if}
 		</div>
+		{#if onback || onforward}
+			<div class="nav-btns">
+				<button
+					class="nav-btn"
+					disabled={!canBack}
+					onclick={() => onback?.()}
+					onmousedown={(e) => e.preventDefault()}
+					onmouseenter={(e) => canBack && showTooltip(e, t('tooltip.back', currentLanguage))}
+					onmouseleave={hideTooltip}
+					aria-label={t('tooltip.back', currentLanguage)}>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+				</button>
+				<button
+					class="nav-btn"
+					disabled={!canForward}
+					onclick={() => onforward?.()}
+					onmousedown={(e) => e.preventDefault()}
+					onmouseenter={(e) => canForward && showTooltip(e, t('tooltip.forward', currentLanguage))}
+					onmouseleave={hideTooltip}
+					aria-label={t('tooltip.forward', currentLanguage)}>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+				</button>
+			</div>
+		{/if}
 	</div>
 
 	{#if tabManager.tabs.length > 0 && settings.showTabs}
@@ -1073,6 +1107,35 @@
 	.icon-home-btn:hover,
 	.icon-home-btn.active {
 		background: var(--color-canvas-subtle);
+	}
+
+	.nav-btns {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+	}
+
+	.nav-btn {
+		display: flex;
+		width: 28px;
+		height: 28px;
+		justify-content: center;
+		align-items: center;
+		background: transparent;
+		border: none;
+		color: var(--color-fg-muted);
+		border-radius: 4px;
+		cursor: pointer;
+		transition: background 0.1s;
+	}
+
+	.nav-btn:hover:not(:disabled) {
+		background: var(--color-canvas-subtle);
+	}
+
+	.nav-btn:disabled {
+		opacity: 0.35;
+		cursor: default;
 	}
 
 	.window-title-container {

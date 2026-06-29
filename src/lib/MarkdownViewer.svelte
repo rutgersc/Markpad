@@ -28,7 +28,7 @@ import { processMarkdownHtml } from './utils/markdown';
 
 	import DOMPurify from 'dompurify';
 	import HomePage from './components/HomePage.svelte';
-import { tabManager } from './stores/tabs.svelte.js';
+import { tabManager, navHistory } from './stores/tabs.svelte.js';
 import { settings } from './stores/settings.svelte.js';
 import { t } from './utils/i18n.js';
 
@@ -184,6 +184,10 @@ import { t } from './utils/i18n.js';
 
 	// derived from tab manager
 	let currentFile = $derived(tabManager.activeTab?.path ?? '');
+
+	$effect(() => {
+		navHistory.record(currentFile);
+	});
 	const markdownLinkExtensions = ['.md', '.markdown', '.mdown', '.mkd', '.txt'];
 	function hasMarkdownLinkExtension(path: string) {
 		const normalizedPath = path.toLowerCase();
@@ -1065,23 +1069,72 @@ import { t } from './utils/i18n.js';
 		return false;
 	}
 
-	async function openRelativeMarkdownTarget(target: RelativeMarkdownTarget) {
-		const isAbsoluteTarget = isAbsoluteMarkdownPath(target.path);
-		if (!currentFile && !isAbsoluteTarget) return;
-		const resolved = isAbsoluteTarget ? target.path : resolvePath(currentFile, target.path);
+	type LinkOpenOptions = { newTab?: boolean };
+
+	async function openMarkdownPath(resolved: string, hash: string, opts: LinkOpenOptions = {}) {
 		if (normalizeComparableMarkdownPath(resolved) === normalizeComparableMarkdownPath(currentFile)) {
-			if (target.hash) {
-				await scrollToAnchorWhenReady(target.hash);
+			if (hash) {
+				await scrollToAnchorWhenReady(hash);
 			} else if (markdownBody) {
 				pushScrollHistory();
 				markdownBody.scrollTo({ top: 0, behavior: 'smooth' });
 			}
 			return;
 		}
-		if (tabManager.activeTabId && !(await canCloseTab(tabManager.activeTabId))) return;
-		await loadMarkdown(resolved, { navigate: true });
-		if (target.hash) {
-			await scrollToAnchorWhenReady(target.hash, { pushHistory: false }, resolved);
+		if (opts.newTab) {
+			await loadMarkdown(resolved, {});
+		} else {
+			if (tabManager.activeTabId && !(await canCloseTab(tabManager.activeTabId))) return;
+			await loadMarkdown(resolved, { navigate: true });
+		}
+		if (hash) {
+			await scrollToAnchorWhenReady(hash, { pushHistory: false }, resolved);
+		}
+	}
+
+	async function openRelativeMarkdownTarget(target: RelativeMarkdownTarget, opts: LinkOpenOptions = {}) {
+		const isAbsoluteTarget = isAbsoluteMarkdownPath(target.path);
+		if (!currentFile && !isAbsoluteTarget) return;
+		const resolved = isAbsoluteTarget ? target.path : resolvePath(currentFile, target.path);
+		await openMarkdownPath(resolved, target.hash, opts);
+	}
+
+	async function activateLink(anchor: HTMLAnchorElement, e: Event, opts: LinkOpenOptions = {}) {
+		const wikiTarget = anchor.dataset.wikilink;
+		if (wikiTarget) {
+			e.preventDefault();
+			try {
+				const resolved = (await invoke('resolve_wikilink', { currentFile, target: wikiTarget })) as string | null;
+				if (resolved) await openMarkdownPath(resolved, '', opts);
+				else addToast(`Note not found: ${wikiTarget}`, 'error');
+			} catch (err) {
+				console.error('Failed to resolve wikilink', err);
+				addToast(`Note not found: ${wikiTarget}`, 'error');
+			}
+			return;
+		}
+
+		const rawHref = anchor.getAttribute('href');
+		if (!rawHref) return;
+
+		if (rawHref.startsWith('#')) {
+			if (rawHref.length > 1) {
+				e.preventDefault();
+				await scrollToAnchorWhenReady(rawHref.substring(1));
+			}
+			return;
+		}
+
+		const relativeMarkdownTarget = getRelativeMarkdownTarget(rawHref);
+		if (relativeMarkdownTarget) {
+			e.preventDefault();
+			await openRelativeMarkdownTarget(relativeMarkdownTarget, opts);
+			return;
+		}
+
+		if (anchor.href) {
+			e.preventDefault();
+			await openUrl(anchor.href);
 		}
 	}
 
@@ -1135,20 +1188,9 @@ import { t } from './utils/i18n.js';
 
 		const a = target.closest('a');
 		if (a) {
-			const href = a.getAttribute('href');
-			if (href?.startsWith('#') && href.length > 1) {
-				e.preventDefault();
-				await scrollToAnchorWhenReady(href.substring(1));
-				return;
-			}
-
-			const relativeMarkdownTarget = href ? getRelativeMarkdownTarget(href) : null;
-			if (relativeMarkdownTarget) {
-				e.preventDefault();
-				e.stopPropagation();
-				await openRelativeMarkdownTarget(relativeMarkdownTarget);
-				return;
-			}
+			e.stopPropagation();
+			await activateLink(a, e, { newTab: e.ctrlKey || e.metaKey });
+			return;
 		}
 
         // media zoom handling
@@ -1942,6 +1984,9 @@ import { t } from './utils/i18n.js';
 		if (target?.tagName === 'A') {
 			const anchor = target as HTMLAnchorElement;
 
+			// Links inside the rendered markdown are owned by handleLinkClick (article handler)
+			if (anchor.closest('.markdown-body')) return;
+
 			const wikiTarget = anchor.dataset.wikilink;
 			if (wikiTarget) {
 				event.preventDefault();
@@ -2222,6 +2267,50 @@ import { t } from './utils/i18n.js';
 		}
 	}
 
+	async function navigateHistory(direction: 'back' | 'forward') {
+		const path = direction === 'back' ? navHistory.backPath : navHistory.forwardPath;
+		if (!path) return;
+
+		const existing = tabManager.tabs.find((t) => t.path === path);
+		// in-place navigation replaces the current tab — guard unsaved edits before committing
+		if (!existing && tabManager.activeTabId && !(await canCloseTab(tabManager.activeTabId))) return;
+
+		navHistory.suppress = true;
+		try {
+			if (direction === 'back') navHistory.back();
+			else navHistory.forward();
+
+			if (existing) {
+				tabManager.setActive(existing.id);
+			} else {
+				if (tabManager.activeTab) tabManager.updateTabPath(tabManager.activeTab.id, path);
+				await loadMarkdown(path, { skipTabManagement: true, resetScrollHistory: true });
+			}
+		} finally {
+			await tick();
+			navHistory.suppress = false;
+		}
+	}
+
+	function handleAuxMouseDown(e: MouseEvent) {
+		// Suppress the webview's own back/forward navigation on mouse buttons 3/4
+		if (e.button === 3 || e.button === 4) {
+			e.preventDefault();
+			return;
+		}
+		// Suppress middle-click autoscroll when opening a link in a new tab
+		if (e.button === 1 && (e.target as HTMLElement)?.closest?.('a')) e.preventDefault();
+	}
+
+	async function handleAuxClick(e: MouseEvent) {
+		if (e.button !== 1) return; // middle button only
+		const a = (e.target as HTMLElement).closest('a');
+		if (!a) return;
+		e.preventDefault();
+		e.stopPropagation();
+		await activateLink(a, e, { newTab: true });
+	}
+
 	function handleMouseUp(e: MouseEvent) {
 		if (e.button === 3) {
 			// Back
@@ -2232,11 +2321,8 @@ import { t } from './utils/i18n.js';
 				const pos = scrollHistory.pop()!;
 				isProgrammaticScroll = true;
 				markdownBody.scrollTo({ top: pos, behavior: 'smooth' });
-			} else if (tabManager.activeTabId) {
-				const path = tabManager.goBack(tabManager.activeTabId);
-				if (path) {
-					loadMarkdown(path, { skipTabManagement: true, resetScrollHistory: true });
-				}
+			} else {
+				navigateHistory('back');
 			}
 		} else if (e.button === 4) {
 			// Forward
@@ -2246,11 +2332,8 @@ import { t } from './utils/i18n.js';
 				const pos = scrollFuture.pop()!;
 				isProgrammaticScroll = true;
 				markdownBody.scrollTo({ top: pos, behavior: 'smooth' });
-			} else if (tabManager.activeTabId) {
-				const path = tabManager.goForward(tabManager.activeTabId);
-				if (path) {
-					loadMarkdown(path, { skipTabManagement: true, resetScrollHistory: true });
-				}
+			} else {
+				navigateHistory('forward');
 			}
 		}
 	}
@@ -2708,6 +2791,7 @@ import { t } from './utils/i18n.js';
 	onmouseover={handleMouseOver}
 	onmouseout={handleMouseOut}
 	onkeydown={handleKeyDown}
+	onmousedown={handleAuxMouseDown}
 	onmouseup={handleMouseUp} />
 
 {#if mode === 'loading'}
@@ -2766,6 +2850,10 @@ import { t } from './utils/i18n.js';
 		{windowTitle}
 		{showHome}
 		{zoomLevel}
+		onback={() => navigateHistory('back')}
+		onforward={() => navigateHistory('forward')}
+		canBack={navHistory.canBack}
+		canForward={navHistory.canForward}
 		onselectFile={selectFile}
 		onnewFile={handleNewFile}
 		onopenFile={selectFile}
@@ -2864,6 +2952,7 @@ import { t } from './utils/i18n.js';
 								bind:innerHTML={sanitizedHtml}
 								onscroll={handleScroll}
 								onclick={handleLinkClick}
+								onauxclick={handleAuxClick}
 								onkeydown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleLinkClick(e as unknown as MouseEvent); }}
 								tabindex="-1"
 								style="outline: none; font-family: {settings.previewFont}, sans-serif; font-size: {settings.previewFontSize}px; flex: 1;">

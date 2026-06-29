@@ -277,6 +277,8 @@ export const translations: Record<LanguageCode, Translation> = {
         },
         tooltip: {
             menu: 'Menu',
+            back: 'Back',
+            forward: 'Forward',
             more: 'More',
             moreActions: 'More Actions',
             settings: 'Settings',

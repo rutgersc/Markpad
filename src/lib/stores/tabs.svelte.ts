@@ -375,3 +375,49 @@ class TabManager {
 }
 
 export const tabManager = new TabManager();
+
+class NavHistory {
+	stack = $state<string[]>([]);
+	index = $state(-1);
+	suppress = false;
+
+	get canBack(): boolean {
+		return this.index > 0;
+	}
+
+	get canForward(): boolean {
+		return this.index >= 0 && this.index < this.stack.length - 1;
+	}
+
+	get backPath(): string | null {
+		return this.canBack ? this.stack[this.index - 1] : null;
+	}
+
+	get forwardPath(): string | null {
+		return this.canForward ? this.stack[this.index + 1] : null;
+	}
+
+	record(path: string) {
+		if (this.suppress) return;
+		if (!path || path === 'HOME') return;
+		if (this.stack[this.index] === path) return;
+
+		this.stack = [...this.stack.slice(0, this.index + 1), path];
+		if (this.stack.length > 100) this.stack = this.stack.slice(this.stack.length - 100);
+		this.index = this.stack.length - 1;
+	}
+
+	back(): string | null {
+		if (!this.canBack) return null;
+		this.index--;
+		return this.stack[this.index];
+	}
+
+	forward(): string | null {
+		if (!this.canForward) return null;
+		this.index++;
+		return this.stack[this.index];
+	}
+}
+
+export const navHistory = new NavHistory();

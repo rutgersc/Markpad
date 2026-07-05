@@ -17,6 +17,7 @@
 	import { updateStore } from './stores/update.svelte.js';
 	import ContextMenu, { type ContextMenuItem } from './components/ContextMenu.svelte';
 	import Toc from './components/Toc.svelte';
+	import TabSidebar from './components/TabSidebar.svelte';
 	import Toast from './components/Toast.svelte';
 	import FindBar from './components/FindBar.svelte';
 	import { exportAsHtml as _exportHtml, exportAsPdf } from './utils/export';
@@ -3055,6 +3056,28 @@ import { t } from './utils/i18n.js';
 		<HomePage {recentFiles} onselectFile={selectFile} onloadFile={loadMarkdown} onremoveRecentFile={removeRecentFile} onnewFile={handleNewFile} />
 	{/if}
 
+	{#if tabManager.tabs.length > 0}
+		<button
+			class="tab-sidebar-toggle {settings.showTabsSidebar ? 'expanded' : ''}"
+			onclick={() => settings.toggleTabsSidebar()}
+			aria-label={settings.showTabsSidebar ? t('tooltip.hide', settings.language) : t('tooltip.show', settings.language)}>
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="15 18 9 12 15 6"></polyline>
+			</svg>
+		</button>
+
+		{#if settings.showTabsSidebar}
+			<div
+				transition:fly={{ x: 240, duration: 300, opacity: 1, easing: cubicOut }}
+				class="tab-sidebar-overlay">
+				<TabSidebar
+					{showHome}
+					ontabclick={() => (showHome = false)}
+					oncloseTab={closeTabAndWindowIfLast} />
+			</div>
+		{/if}
+	{/if}
+
 	<div 
 		class="tooltip align-{tooltip.align} {tooltip.show ? 'visible' : ''}" 
 		class:footnote-tooltip={tooltip.isFootnote} 
@@ -3774,5 +3797,60 @@ import { t } from './utils/i18n.js';
 		opacity: 0.9;
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
+	}
+
+	.tab-sidebar-overlay {
+		position: fixed;
+		top: 36px;
+		right: 0;
+		bottom: 0;
+		width: 240px;
+		z-index: 1000;
+		background-color: var(--color-canvas-default);
+		border-left: 1px solid var(--color-border-default);
+		box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
+	}
+
+	.tab-sidebar-toggle {
+		position: fixed;
+		top: 48px;
+		right: 8px;
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: transparent;
+		border: none;
+		border-radius: 4px;
+		color: var(--color-fg-muted);
+		cursor: pointer;
+		z-index: 1001;
+		opacity: 0.6;
+		padding: 0;
+		transition:
+			right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+			background-color 0.2s ease,
+			color 0.2s ease,
+			opacity 0.2s ease;
+	}
+
+	.tab-sidebar-toggle.expanded {
+		right: 248px;
+	}
+
+	.tab-sidebar-toggle:hover {
+		opacity: 1;
+		background-color: var(--color-canvas-subtle);
+		color: var(--color-fg-default);
+	}
+
+	.tab-sidebar-toggle svg {
+		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		transform: rotate(0deg);
+	}
+
+	.tab-sidebar-toggle.expanded svg {
+		transform: rotate(180deg);
 	}
 </style>

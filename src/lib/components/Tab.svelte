@@ -5,10 +5,11 @@
 	import { t } from '../utils/i18n.js';
 	import { settings } from '../stores/settings.svelte.js';
 
-	let { tab, isActive, isLast, onclick, onclose } = $props<{
+	let { tab, isActive, isLast, vertical = false, onclick, onclose } = $props<{
 		tab: Tab;
 		isActive: boolean;
 		isLast?: boolean;
+		vertical?: boolean;
 		onclick: () => void;
 		onclose: (e: MouseEvent) => void;
 	}>();
@@ -65,7 +66,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="tab {isActive ? 'active' : ''}" class:last={isLast} role="group" title={tab.path || 'Recents'} oncontextmenu={handleContextMenu}>
+<div class="tab {isActive ? 'active' : ''}" class:last={isLast} class:vertical role="group" title={tab.path || 'Recents'} oncontextmenu={handleContextMenu}>
 	<button class="tab-content-btn" onclick={onclick} onmousedown={(e) => {
 		if (e.button === 0) e.preventDefault();
 		handleMiddleClick(e);
@@ -116,6 +117,14 @@
 
 	.tab.last {
 		border-right: none;
+	}
+
+	.tab.vertical {
+		width: 100%;
+		min-width: 0;
+		max-width: none;
+		height: 32px;
+		border-radius: 6px;
 	}
 
 

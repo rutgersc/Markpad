@@ -136,6 +136,7 @@ export class SettingsStore {
 	restoreStateOnReopen = $state(true);
 	zenMode = $state(false);
 	showToc = $state(false);
+	showTabsSidebar = $state(false);
 	preZenState = $state<{
 		renderLineHighlight: string;
 		showTabs: boolean;
@@ -143,6 +144,7 @@ export class SettingsStore {
 		minimap: boolean;
 		lineNumbers: string;
 		showToc: boolean;
+		showTabsSidebar: boolean;
 	} | null>(null);
 	occurrencesHighlight = $state(false);
 	showWhitespace = $state(false);
@@ -186,6 +188,7 @@ export class SettingsStore {
 			const savedOccurrencesHighlight = localStorage.getItem('editor.occurrencesHighlight');
 			const savedShowWhitespace = localStorage.getItem('editor.showWhitespace');
 			const savedShowToc = localStorage.getItem('editor.showToc');
+			const savedShowTabsSidebar = localStorage.getItem('editor.showTabsSidebar');
 			const savedHighlightColor = localStorage.getItem('editor.highlightColor');
 			const savedStartInEditor = localStorage.getItem('editor.startInEditor');
 			const savedShowRecentFiles = localStorage.getItem('editor.showRecentFiles');
@@ -229,6 +232,7 @@ export class SettingsStore {
 			if (savedOccurrencesHighlight !== null) this.occurrencesHighlight = savedOccurrencesHighlight === 'true';
 			if (savedShowWhitespace !== null) this.showWhitespace = savedShowWhitespace === 'true';
 			if (savedShowToc !== null) this.showToc = savedShowToc === 'true';
+			if (savedShowTabsSidebar !== null) this.showTabsSidebar = savedShowTabsSidebar === 'true';
 			if (savedHighlightColor !== null) this.highlightColor = savedHighlightColor;
 			if (savedStartInEditor !== null) this.startInEditor = savedStartInEditor === 'true';
 			if (savedShowRecentFiles !== null) this.showRecentFiles = savedShowRecentFiles === 'true';
@@ -295,6 +299,7 @@ export class SettingsStore {
 					localStorage.setItem('editor.occurrencesHighlight', String(this.occurrencesHighlight));
 					localStorage.setItem('editor.showWhitespace', String(this.showWhitespace));
 					localStorage.setItem('editor.showToc', String(this.showToc));
+					localStorage.setItem('editor.showTabsSidebar', String(this.showTabsSidebar));
 					localStorage.setItem('editor.highlightColor', this.highlightColor);
 					localStorage.setItem('editor.startInEditor', String(this.startInEditor));
 					localStorage.setItem('editor.showRecentFiles', String(this.showRecentFiles));
@@ -378,6 +383,7 @@ export class SettingsStore {
 				minimap: this.minimap,
 				lineNumbers: this.lineNumbers,
 				showToc: this.showToc,
+				showTabsSidebar: this.showTabsSidebar,
 			};
 			this.renderLineHighlight = 'none';
 			this.showTabs = false;
@@ -385,6 +391,7 @@ export class SettingsStore {
 			this.minimap = false;
 			this.lineNumbers = 'off';
 			this.showToc = false;
+			this.showTabsSidebar = false;
 		} else {
 			if (this.preZenState) {
 				this.renderLineHighlight = this.preZenState.renderLineHighlight;
@@ -393,6 +400,7 @@ export class SettingsStore {
 				this.minimap = this.preZenState.minimap;
 				this.lineNumbers = this.preZenState.lineNumbers;
 				this.showToc = this.preZenState.showToc;
+				this.showTabsSidebar = this.preZenState.showTabsSidebar;
 				this.preZenState = null;
 			}
 		}
@@ -400,6 +408,10 @@ export class SettingsStore {
 
 	toggleToc() {
 		this.showToc = !this.showToc;
+	}
+
+	toggleTabsSidebar() {
+		this.showTabsSidebar = !this.showTabsSidebar;
 	}
 
 	toggleOccurrencesHighlight() {

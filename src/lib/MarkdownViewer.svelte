@@ -3063,8 +3063,9 @@ import { t } from './utils/i18n.js';
 			class="tab-sidebar-toggle {settings.showTabsSidebar ? 'expanded' : ''}"
 			onclick={() => settings.toggleTabsSidebar()}
 			aria-label={settings.showTabsSidebar ? t('tooltip.hide', settings.language) : t('tooltip.show', settings.language)}>
-			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="9 18 15 12 9 6"></polyline>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="3" width="18" height="18" rx="2"></rect>
+				<line x1="9" y1="3" x2="9" y2="21"></line>
 			</svg>
 		</button>
 
@@ -3833,7 +3834,7 @@ import { t } from './utils/i18n.js';
 
 	.tab-sidebar-toggle {
 		position: fixed;
-		top: 48px;
+		top: 84px;
 		left: 8px;
 		width: 28px;
 		height: 28px;
@@ -3857,20 +3858,13 @@ import { t } from './utils/i18n.js';
 
 	.tab-sidebar-toggle.expanded {
 		left: 248px;
+		color: var(--color-accent-fg);
+		opacity: 1;
 	}
 
 	.tab-sidebar-toggle:hover {
 		opacity: 1;
 		background-color: var(--color-canvas-subtle);
 		color: var(--color-fg-default);
-	}
-
-	.tab-sidebar-toggle svg {
-		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		transform: rotate(0deg);
-	}
-
-	.tab-sidebar-toggle.expanded svg {
-		transform: rotate(180deg);
 	}
 </style>

@@ -5,11 +5,12 @@
 	import { t } from '../utils/i18n.js';
 	import { settings } from '../stores/settings.svelte.js';
 
-	let { tab, isActive, isLast, vertical = false, onclick, onclose } = $props<{
+	let { tab, isActive, isLast, vertical = false, extraMenuItems = [], onclick, onclose } = $props<{
 		tab: Tab;
 		isActive: boolean;
 		isLast?: boolean;
 		vertical?: boolean;
+		extraMenuItems?: ContextMenuItem[];
 		onclick: () => void;
 		onclose: (e: MouseEvent) => void;
 	}>();
@@ -56,6 +57,7 @@
 				{ label: t('menu.closeFile', currentLang), shortcut: 'Ctrl+W', onClick: () => emit('menu-tab-close', tab.id) },
 				{ label: t('menu.closeOtherTabs', currentLang), onClick: () => emit('menu-tab-close-others', tab.id) },
 				{ label: t('menu.closeTabsToRight', currentLang), onClick: () => emit('menu-tab-close-right', tab.id) },
+				...(extraMenuItems.length ? [{ separator: true } as ContextMenuItem, ...extraMenuItems] : []),
 			],
 		};
 	}

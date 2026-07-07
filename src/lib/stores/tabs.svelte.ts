@@ -20,10 +20,29 @@ export interface Tab {
 	splitRatio: number;
 	isScrollSynced: boolean;
 	hasPendingDiff: boolean;
+	groupId?: string;
 }
+
+export interface TabGroup {
+	id: string;
+	name: string;
+	color: string;
+	collapsed: boolean;
+}
+
+// A drop lands relative to the row directly above it; the dragged tab inherits
+// that row's group. Membership is thus a consequence of position — no separate
+// contiguity invariant to maintain.
+export type DropAnchor =
+	| { kind: 'top' }
+	| { kind: 'tab'; id: string }
+	| { kind: 'header'; groupId: string };
+
+const GROUP_COLORS = ['#4c8bf5', '#e0616e', '#e0a34c', '#5bbf6a', '#a06ee0', '#4cc0d0', '#d06ea0', '#8a94a6'];
 
 class TabManager {
 	tabs = $state<Tab[]>([]);
+	groups = $state<TabGroup[]>([]);
 	activeTabId = $state<string | null>(null);
 	splitScrollSyncPreference = $state(false);
 
@@ -49,6 +68,7 @@ class TabManager {
 	serializeState(): string {
 		const stateData = {
 			activeTabId: this.activeTabId,
+			groups: this.groups,
 			tabs: this.tabs.map(t => ({ ...t, editorViewState: null, content: '' }))
 		};
 		return JSON.stringify(stateData);
@@ -60,6 +80,7 @@ class TabManager {
 			if (data && Array.isArray(data.tabs)) {
 				this.tabs = data.tabs;
 				this.activeTabId = data.activeTabId;
+				this.groups = Array.isArray(data.groups) ? data.groups : [];
 			}
 		} catch (e) {
 			console.error('Failed to restore tab state', e);
@@ -167,7 +188,9 @@ class TabManager {
 		if (tab.path && tab.path !== 'HOME') {
 			this.recentlyClosed.push(tab.path);
 		}
+		const gid = tab.groupId;
 		this.tabs.splice(index, 1);
+		if (gid) this.cleanupGroup(gid);
 	}
 
 	closeAll() {
@@ -177,6 +200,11 @@ class TabManager {
 
 	setActive(id: string) {
 		this.activeTabId = id;
+		const tab = this.tabs.find((t) => t.id === id);
+		if (tab?.groupId) {
+			const group = this.getGroup(tab.groupId);
+			if (group?.collapsed) group.collapsed = false;
+		}
 	}
 
 	updateTabContent(id: string, content: string) {
@@ -273,6 +301,118 @@ class TabManager {
 		if (fromIndex === toIndex) return;
 		const [moved] = this.tabs.splice(fromIndex, 1);
 		this.tabs.splice(toIndex, 0, moved);
+	}
+
+	getGroup(id: string) {
+		return this.groups.find((g) => g.id === id);
+	}
+
+	createGroupFromTab(tabId: string, name: string = 'New Group') {
+		const tab = this.tabs.find((t) => t.id === tabId);
+		if (!tab) return null;
+		const oldGroup = tab.groupId;
+		if (oldGroup) {
+			// pull it out of its current group first so that run stays contiguous
+			const without = this.tabs.filter((t) => t.id !== tabId);
+			const lastMember = without.map((t) => t.groupId).lastIndexOf(oldGroup);
+			if (lastMember < 0) without.push(tab);
+			else without.splice(lastMember + 1, 0, tab);
+			this.tabs = without;
+		}
+		const id = crypto.randomUUID();
+		const color = GROUP_COLORS[this.groups.length % GROUP_COLORS.length];
+		this.groups.push({ id, name, color, collapsed: false });
+		tab.groupId = id;
+		if (oldGroup) this.cleanupGroup(oldGroup);
+		return id;
+	}
+
+	renameGroup(id: string, name: string) {
+		const g = this.getGroup(id);
+		if (g) g.name = name;
+	}
+
+	setGroupColor(id: string, color: string) {
+		const g = this.getGroup(id);
+		if (g) g.color = color;
+	}
+
+	cycleGroupColor(id: string) {
+		const g = this.getGroup(id);
+		if (!g) return;
+		const i = GROUP_COLORS.indexOf(g.color);
+		g.color = GROUP_COLORS[(i + 1) % GROUP_COLORS.length];
+	}
+
+	toggleGroupCollapsed(id: string) {
+		const g = this.getGroup(id);
+		if (g) g.collapsed = !g.collapsed;
+	}
+
+	dissolveGroup(id: string) {
+		this.tabs.forEach((t) => {
+			if (t.groupId === id) t.groupId = undefined;
+		});
+		this.groups = this.groups.filter((g) => g.id !== id);
+	}
+
+	private cleanupGroup(id: string) {
+		if (!this.tabs.some((t) => t.groupId === id)) {
+			this.groups = this.groups.filter((g) => g.id !== id);
+		}
+	}
+
+	removeFromGroup(tabId: string) {
+		const tab = this.tabs.find((t) => t.id === tabId);
+		if (!tab?.groupId) return;
+		const gid = tab.groupId;
+		const without = this.tabs.filter((t) => t.id !== tabId);
+		// relocate just past the group's last remaining member so the run stays contiguous
+		const lastMember = without.map((t) => t.groupId).lastIndexOf(gid);
+		tab.groupId = undefined;
+		if (lastMember < 0) without.push(tab);
+		else without.splice(lastMember + 1, 0, tab);
+		this.tabs = without;
+		this.cleanupGroup(gid);
+	}
+
+	// Commit a drag: the dragged tab is reinserted relative to `anchor` (the row
+	// directly above the drop point) and inherits that anchor's group.
+	applyDrop(draggedId: string, anchor: DropAnchor) {
+		const dragged = this.tabs.find((t) => t.id === draggedId);
+		if (!dragged) return;
+		const oldGroup = dragged.groupId;
+		const without = this.tabs.filter((t) => t.id !== draggedId);
+
+		let pos: number;
+		let groupId: string | undefined;
+		if (anchor.kind === 'top') {
+			pos = 0;
+			groupId = undefined;
+		} else if (anchor.kind === 'tab') {
+			const ai = without.findIndex((t) => t.id === anchor.id);
+			if (ai < 0) {
+				pos = without.length;
+				groupId = undefined;
+			} else {
+				pos = ai + 1;
+				groupId = without[ai].groupId;
+			}
+		} else {
+			groupId = anchor.groupId;
+			const first = without.findIndex((t) => t.groupId === anchor.groupId);
+			pos = first < 0 ? without.length : first;
+		}
+
+		dragged.groupId = groupId;
+		without.splice(pos, 0, dragged);
+		this.tabs = without;
+
+		if (oldGroup && oldGroup !== groupId) this.cleanupGroup(oldGroup);
+		if (groupId) {
+			const g = this.getGroup(groupId);
+			if (g?.collapsed) g.collapsed = false;
+		}
 	}
 
 	cycleTab(direction: 'next' | 'prev') {

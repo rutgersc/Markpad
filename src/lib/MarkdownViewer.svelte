@@ -2887,6 +2887,7 @@ import { t } from './utils/i18n.js';
 
 	<Settings show={showSettings} {theme} onSetTheme={(t) => (theme = t)} onclose={() => (showSettings = false)} />
 
+	<div class="content-region" class:sidebar-docked={settings.showTabsSidebar && settings.pinnedTabsSidebar && tabManager.tabs.length > 0}>
 	{#if tabManager.activeTab && (tabManager.activeTab.path !== '' || tabManager.activeTab.title !== 'Recents') && !showHome}
 			<div
 				class="markdown-container"
@@ -3055,6 +3056,7 @@ import { t } from './utils/i18n.js';
 	{:else}
 		<HomePage {recentFiles} onselectFile={selectFile} onloadFile={loadMarkdown} onremoveRecentFile={removeRecentFile} onnewFile={handleNewFile} />
 	{/if}
+	</div>
 
 	{#if tabManager.tabs.length > 0}
 		<button
@@ -3062,14 +3064,15 @@ import { t } from './utils/i18n.js';
 			onclick={() => settings.toggleTabsSidebar()}
 			aria-label={settings.showTabsSidebar ? t('tooltip.hide', settings.language) : t('tooltip.show', settings.language)}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="15 18 9 12 15 6"></polyline>
+				<polyline points="9 18 15 12 9 6"></polyline>
 			</svg>
 		</button>
 
 		{#if settings.showTabsSidebar}
 			<div
-				transition:fly={{ x: 240, duration: 300, opacity: 1, easing: cubicOut }}
-				class="tab-sidebar-overlay">
+				transition:fly={{ x: -240, duration: 300, opacity: 1, easing: cubicOut }}
+				class="tab-sidebar-overlay"
+				class:docked={settings.pinnedTabsSidebar}>
 				<TabSidebar
 					{showHome}
 					ontabclick={() => (showHome = false)}
@@ -3799,22 +3802,39 @@ import { t } from './utils/i18n.js';
 		-webkit-backdrop-filter: blur(8px);
 	}
 
+	.content-region {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	.content-region.sidebar-docked {
+		left: 240px;
+	}
+
 	.tab-sidebar-overlay {
 		position: fixed;
 		top: 36px;
-		right: 0;
+		left: 0;
 		bottom: 0;
 		width: 240px;
 		z-index: 1000;
 		background-color: var(--color-canvas-default);
-		border-left: 1px solid var(--color-border-default);
-		box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
+		border-right: 1px solid var(--color-border-default);
+		box-shadow: 10px 0 30px rgba(0, 0, 0, 0.12);
+	}
+
+	.tab-sidebar-overlay.docked {
+		box-shadow: none;
 	}
 
 	.tab-sidebar-toggle {
 		position: fixed;
 		top: 48px;
-		right: 8px;
+		left: 8px;
 		width: 28px;
 		height: 28px;
 		display: flex;
@@ -3829,14 +3849,14 @@ import { t } from './utils/i18n.js';
 		opacity: 0.6;
 		padding: 0;
 		transition:
-			right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+			left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
 			background-color 0.2s ease,
 			color 0.2s ease,
 			opacity 0.2s ease;
 	}
 
 	.tab-sidebar-toggle.expanded {
-		right: 248px;
+		left: 248px;
 	}
 
 	.tab-sidebar-toggle:hover {

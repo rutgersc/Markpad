@@ -137,6 +137,7 @@ export class SettingsStore {
 	zenMode = $state(false);
 	showToc = $state(false);
 	showTabsSidebar = $state(false);
+	pinnedTabsSidebar = $state(false);
 	preZenState = $state<{
 		renderLineHighlight: string;
 		showTabs: boolean;
@@ -189,6 +190,7 @@ export class SettingsStore {
 			const savedShowWhitespace = localStorage.getItem('editor.showWhitespace');
 			const savedShowToc = localStorage.getItem('editor.showToc');
 			const savedShowTabsSidebar = localStorage.getItem('editor.showTabsSidebar');
+			const savedPinnedTabsSidebar = localStorage.getItem('editor.pinnedTabsSidebar');
 			const savedHighlightColor = localStorage.getItem('editor.highlightColor');
 			const savedStartInEditor = localStorage.getItem('editor.startInEditor');
 			const savedShowRecentFiles = localStorage.getItem('editor.showRecentFiles');
@@ -233,6 +235,7 @@ export class SettingsStore {
 			if (savedShowWhitespace !== null) this.showWhitespace = savedShowWhitespace === 'true';
 			if (savedShowToc !== null) this.showToc = savedShowToc === 'true';
 			if (savedShowTabsSidebar !== null) this.showTabsSidebar = savedShowTabsSidebar === 'true';
+			if (savedPinnedTabsSidebar !== null) this.pinnedTabsSidebar = savedPinnedTabsSidebar === 'true';
 			if (savedHighlightColor !== null) this.highlightColor = savedHighlightColor;
 			if (savedStartInEditor !== null) this.startInEditor = savedStartInEditor === 'true';
 			if (savedShowRecentFiles !== null) this.showRecentFiles = savedShowRecentFiles === 'true';
@@ -300,6 +303,7 @@ export class SettingsStore {
 					localStorage.setItem('editor.showWhitespace', String(this.showWhitespace));
 					localStorage.setItem('editor.showToc', String(this.showToc));
 					localStorage.setItem('editor.showTabsSidebar', String(this.showTabsSidebar));
+					localStorage.setItem('editor.pinnedTabsSidebar', String(this.pinnedTabsSidebar));
 					localStorage.setItem('editor.highlightColor', this.highlightColor);
 					localStorage.setItem('editor.startInEditor', String(this.startInEditor));
 					localStorage.setItem('editor.showRecentFiles', String(this.showRecentFiles));
@@ -412,6 +416,10 @@ export class SettingsStore {
 
 	toggleTabsSidebar() {
 		this.showTabsSidebar = !this.showTabsSidebar;
+	}
+
+	togglePinnedTabsSidebar() {
+		this.pinnedTabsSidebar = !this.pinnedTabsSidebar;
 	}
 
 	toggleOccurrencesHighlight() {

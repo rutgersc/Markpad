@@ -211,10 +211,25 @@
 <div class="tab-sidebar">
 	<div class="tab-sidebar-header">
 		<button
-			class="new-tab-btn"
+			class="hdr-btn {settings.pinnedTabsSidebar ? 'active' : ''}"
+			onclick={() => settings.togglePinnedTabsSidebar()}
+			onmousedown={(e) => e.preventDefault()}
+			title={settings.pinnedTabsSidebar ? t('tooltip.undock', settings.language) : t('tooltip.dock', settings.language)}
+			aria-label={settings.pinnedTabsSidebar ? t('tooltip.undock', settings.language) : t('tooltip.dock', settings.language)}>
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+				<rect width="18" height="18" x="3" y="3" rx="2" />
+				<path d="M9 3v18" />
+				{#if !settings.pinnedTabsSidebar}
+					<path d="m14 9-3 3 3 3" />
+				{/if}
+			</svg>
+		</button>
+		<button
+			class="hdr-btn"
 			onclick={() => tabManager.addNewTab()}
 			onmousedown={(e) => e.preventDefault()}
-			title={`${t('tooltip.newTab', settings.language)} (Ctrl+T)`}>
+			title={`${t('tooltip.newTab', settings.language)} (Ctrl+T)`}
+			aria-label={t('tooltip.newTab', settings.language)}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 				><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 		</button>
@@ -319,13 +334,13 @@
 
 	.tab-sidebar-header {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
 		align-items: center;
 		padding: 8px 8px 4px;
 		flex-shrink: 0;
 	}
 
-	.new-tab-btn {
+	.hdr-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -337,13 +352,22 @@
 		border-radius: 8px;
 		cursor: pointer;
 		flex-shrink: 0;
+		opacity: 0.7;
 		transition:
 			background 0.1s,
-			color 0.1s;
+			color 0.1s,
+			opacity 0.1s;
 	}
 
-	.new-tab-btn:hover {
+	.hdr-btn:hover {
 		background: var(--color-neutral-muted);
+		color: var(--color-fg-default);
+		opacity: 1;
+	}
+
+	.hdr-btn.active {
+		opacity: 1;
+		background: var(--color-canvas-subtle);
 		color: var(--color-fg-default);
 	}
 

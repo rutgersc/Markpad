@@ -204,6 +204,11 @@ import { t } from './utils/i18n.js';
 	const allowedMarkdownUriPattern = new RegExp(`^(?:(?:[a-z]:[^?#]*\\.(?:${markdownLinkExtensionPattern})(?:[?#].*)?$)|(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset|tauri):|[^a-z]|[a-z+.\\-]+(?:[^a-z+.\\-:]|$))`, 'i');
 	let sanitizedHtml = $derived(DOMPurify.sanitize(htmlContent, {
 		ALLOWED_URI_REGEXP: allowedMarkdownUriPattern,
+		// DOMPurify drops <iframe> by default, which would leave our youtube
+		// embed's .video-container wrapper as an empty pane. The CSP frame-src
+		// (tauri.conf.json) restricts what these frames can actually load.
+		ADD_TAGS: ['iframe'],
+		ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder'],
 	}));
 	let scrollTop = $derived(tabManager.activeTab?.scrollTop ?? 0);
 	let isScrolled = $derived(scrollTop > 0);

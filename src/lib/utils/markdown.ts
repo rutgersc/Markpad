@@ -50,11 +50,31 @@ export function getYoutubeId(url: string): string | null {
 	return match && match[2].length === 11 ? match[2] : null;
 }
 
-function replaceWithYoutubeEmbed(element: Element, videoId: string) {
+// `t`/`start` may be raw seconds (`286`) or a colon/unit form (`4:46`, `1h2m3s`).
+export function getYoutubeStartSeconds(url: string): number | null {
+	const raw = url.match(/[?&](?:t|start)=([^&#]+)/)?.[1];
+	if (!raw) return null;
+	if (/^\d+$/.test(raw)) return Number(raw);
+	const units = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+	if (units && (units[1] || units[2] || units[3])) {
+		return (
+			Number(units[1] ?? 0) * 3600 +
+			Number(units[2] ?? 0) * 60 +
+			Number(units[3] ?? 0)
+		);
+	}
+	return null;
+}
+
+function replaceWithYoutubeEmbed(
+	element: Element,
+	videoId: string,
+	startSeconds: number | null,
+) {
 	const container = element.ownerDocument.createElement("div");
 	container.className = "video-container";
 	const iframe = element.ownerDocument.createElement("iframe");
-	iframe.src = `https://www.youtube.com/embed/${videoId}`;
+	iframe.src = `https://www.youtube.com/embed/${videoId}${startSeconds ? `?start=${startSeconds}` : ""}`;
 	iframe.title = "YouTube video player";
 	iframe.frameBorder = "0";
 	iframe.allow =
@@ -517,7 +537,8 @@ export function processMarkdownHtml(
 
 			if (isYoutubeLink(src)) {
 				const videoId = getYoutubeId(src);
-				if (videoId) replaceWithYoutubeEmbed(img, videoId);
+				if (videoId)
+					replaceWithYoutubeEmbed(img, videoId, getYoutubeStartSeconds(src));
 			}
 		}
 	}
@@ -532,7 +553,8 @@ export function processMarkdownHtml(
 				parent.childNodes.length === 1
 			) {
 				const videoId = getYoutubeId(href);
-				if (videoId) replaceWithYoutubeEmbed(a, videoId);
+				if (videoId)
+					replaceWithYoutubeEmbed(a, videoId, getYoutubeStartSeconds(href));
 			}
 		}
 	}

@@ -1190,6 +1190,19 @@
 		editor.getAction("actions.find")?.run();
 	}
 
+	// Current selection as source coordinates for "copy path with location".
+	// Returns exact line:col of the selection; null when nothing is selected.
+	export const getSelectionRef = (): { startLine: number; startCol: number; endLine: number; endCol: number } | null => {
+		const sel = editor?.getSelection();
+		if (!sel || sel.isEmpty()) return null;
+		return {
+			startLine: sel.startLineNumber,
+			startCol: sel.startColumn,
+			endLine: sel.endLineNumber,
+			endCol: sel.endColumn,
+		};
+	};
+
 	export const getValue = () => editor?.getValue() || "";
 	export const setValue = (val: string) => editor?.setValue(val);
 	export const focus = () => editor?.focus();

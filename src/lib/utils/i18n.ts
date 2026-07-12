@@ -193,6 +193,8 @@ export const translations: Record<LanguageCode, Translation> = {
             toggleShowWhitespace: 'Toggle Show Whitespace',
             toggleShowTabs: 'Toggle Show Tabs',
             copyReference: 'Copy Reference',
+            copyPathWithLocation: 'Copy Path with Location',
+            copyFilePath: 'Copy File Path',
             saveImageAs: 'Save Image As...',
             saveDiagramAsSvg: 'Save Diagram As SVG...',
             wordWrapOff: 'Off',
@@ -219,7 +221,8 @@ export const translations: Record<LanguageCode, Translation> = {
             failedToCopyCode: 'Failed to copy code',
             unsupportedFile: 'Unsupported file type: {{filename}}',
             autoSaveFailed: 'Auto-save failed — unsaved changes still in memory',
-            savedNewerEdits: 'Saved — staying in edit mode because you have newer edits'
+            savedNewerEdits: 'Saved — staying in edit mode because you have newer edits',
+            copied: 'Copied: {{text}}'
         },
         modal: {
             confirmExit: 'Confirm Exit',

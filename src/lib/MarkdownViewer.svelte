@@ -80,6 +80,7 @@ import { t } from './utils/i18n.js';
 		redo: () => void;
 		revealHeader: (text: string) => void;
 		triggerFind: () => void;
+		getSelectionRef: () => { startLine: number; startCol: number; endLine: number; endCol: number } | null;
 	} | null>(null);
 	let liveMode = $state(false);
 	let diffMode = $state(true);
@@ -1747,6 +1748,67 @@ import { t } from './utils/i18n.js';
 		if (currentFile) await invoke('open_file_folder', { path: currentFile });
 	}
 
+	// --- Copy path / location (mirrors the nvim <leader>y yank bindings) ---
+	// Full path is always forward-slashed to match the nvim `to_forward_slashes`
+	// yanks, so a copied reference is portable and paste-clean cross-platform.
+	function forwardSlashPath(path: string) {
+		return path.replace(/\\/g, '/');
+	}
+
+	function copyToClipboard(text: string) {
+		invoke('clipboard_write_text', { text }).catch((e) => console.error('Failed to copy', e));
+		addToast(t('toast.copied', uiLanguage).replace('{{text}}', text));
+	}
+
+	// Source line for a preview node, from the nearest ancestor carrying a
+	// comrak `data-sourcepos` ("startLine:startCol-endLine:endCol"). Blocks are
+	// the finest granularity comrak emits, so preview refs are line-level only —
+	// inline columns don't survive markdown → HTML rendering.
+	function sourceLineForNode(node: Node): number | null {
+		let el: Element | null = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+		while (el && el !== markdownBody) {
+			const sp = (el as HTMLElement).dataset?.sourcepos;
+			if (sp) {
+				const line = parseInt(sp.split('-')[0].split(':')[0], 10);
+				if (!isNaN(line)) return line;
+			}
+			el = el.parentElement;
+		}
+		return null;
+	}
+
+	function previewSelectionRange(): { start: number; end: number } | null {
+		const sel = window.getSelection();
+		if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !markdownBody) return null;
+		const range = sel.getRangeAt(0);
+		if (!markdownBody.contains(range.startContainer) || !markdownBody.contains(range.endContainer)) return null;
+		const start = sourceLineForNode(range.startContainer);
+		if (start == null) return null;
+		const end = sourceLineForNode(range.endContainer) ?? start;
+		return { start: Math.min(start, end), end: Math.max(start, end) };
+	}
+
+	// Build the "path + location" reference for the current selection. In the
+	// editor we have exact line:col (nvim CopyPathRange format); in the preview
+	// only source lines. With no selection, returns the bare path (nvim yp).
+	function pathLocationRef(fromEditor: boolean): string | null {
+		if (!currentFile) return null;
+		const fwd = forwardSlashPath(currentFile);
+		if (fromEditor) {
+			const ref = editorPane?.getSelectionRef?.();
+			if (ref) return `${fwd}:${ref.startLine}:${ref.startCol}-${ref.endLine}:${ref.endCol}`;
+			return fwd;
+		}
+		const lines = previewSelectionRange();
+		if (lines) return lines.start === lines.end ? `${fwd}:${lines.start}` : `${fwd}:${lines.start}-${lines.end}`;
+		return fwd;
+	}
+
+	function copyPathWithLocation(fromEditor: boolean) {
+		const ref = pathLocationRef(fromEditor);
+		if (ref) copyToClipboard(ref);
+	}
+
 	async function toggleLiveMode() {
 		liveMode = !liveMode;
 		if (liveMode) {
@@ -1846,6 +1908,22 @@ import { t } from './utils/i18n.js';
 		const hasSelection = selection ? selection.toString().length > 0 : false;
 		const isInsideEditor = (e.target as HTMLElement).closest('.editor-container');
 
+		// Snapshot the path reference now — focusing the menu overlay can collapse
+		// the selection before the click handler runs. In the editor the real
+		// selection lives in Monaco (not the DOM), so probe it directly there.
+		const editorSelection = isInsideEditor ? editorPane?.getSelectionRef?.() : null;
+		const hasLocation = isInsideEditor ? !!editorSelection : hasSelection;
+		const locationRef = currentFile && hasLocation ? pathLocationRef(!!isInsideEditor) : null;
+		const filePathRef = currentFile ? forwardSlashPath(currentFile) : null;
+		const copyPathItems: any[] = [];
+		if (locationRef && locationRef !== filePathRef) {
+			copyPathItems.push({ label: t('menu.copyPathWithLocation', uiLanguage), shortcut: isInsideEditor ? '' : 'Ctrl+Y', onClick: () => copyToClipboard(locationRef) });
+		}
+		if (filePathRef) {
+			copyPathItems.push({ label: t('menu.copyFilePath', uiLanguage), onClick: () => copyToClipboard(filePathRef) });
+		}
+		if (copyPathItems.length) copyPathItems.push({ separator: true });
+
 		// detect heading for copy ref
 		const heading = (e.target as HTMLElement).closest('h1, h2, h3, h4, h5, h6');
 		let copyRefItem: any[] = [];
@@ -1904,6 +1982,7 @@ import { t } from './utils/i18n.js';
 					selection?.addRange(range);
 				} },
 				{ separator: true },
+				...copyPathItems,
 				{ label: t('menu.openLocation', uiLanguage), onClick: openFileLocation, disabled: !currentFile },
 				{ label: t('menu.edit', uiLanguage), onClick: () => toggleEdit() },
 				{ separator: true },
@@ -2257,6 +2336,25 @@ import { t } from './utils/i18n.js';
 		if (!isEditing && !cmdOrCtrl && key === 'k' && markdownBody && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
 			e.preventDefault();
 			smoothScroll(markdownBody, -200);
+		}
+
+		// Copy path (+ source location) and jumplist nav, mirroring nvim.
+		// Skipped while the Monaco editor has focus, where these keys are the
+		// editor's own (redo / open file / italic); the editor exposes copy
+		// path via its right-click menu instead.
+		const active = document.activeElement as Node | null;
+		const editorHasFocus = !!editorPaneEl && !!active && editorPaneEl.contains(active);
+		if (cmdOrCtrl && !e.shiftKey && !e.altKey && key === 'y' && !editorHasFocus) {
+			e.preventDefault();
+			copyPathWithLocation(false);
+		}
+		if (cmdOrCtrl && !e.shiftKey && !e.altKey && key === 'o' && !editorHasFocus) {
+			e.preventDefault();
+			navigateHistory('back');
+		}
+		if (cmdOrCtrl && !e.shiftKey && !e.altKey && key === 'i' && !editorHasFocus) {
+			e.preventDefault();
+			navigateHistory('forward');
 		}
 	}
 
